@@ -1,0 +1,14 @@
+CREATE TABLE players (
+    userId BIGINT PRIMARY KEY NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    chips INT DEFAULT 1000,
+    wins INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE rooms (
+    id VARCHAR(6) PRIMARY KEY,
+    ownerId BIGINT REFERENCES players(userId),
+    initialChips INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
