@@ -1,17 +1,17 @@
 #include "database.h"
 
-Database::Database(const string &s)
+Database::Database(const std::string &s)
 {
     try {
         conn = std::make_shared<pqxx::connection>(s);
         std::cout << "Connected to: " << conn->dbname() << std::endl;
-    } catch (const exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "DB error: " << e.what() << std::endl;
         // throw;
     }
 }
 
-void Database::createPlayer(int64_t userId, const string &name)
+void Database::createPlayer(int64_t userId, const std::string &name)
 {
     pqxx::work txn(*conn);
     txn.exec(
@@ -22,40 +22,32 @@ void Database::createPlayer(int64_t userId, const string &name)
 
 }
 
-shared_ptr<Player> Database::getPlayer(int64_t userId)
+std::shared_ptr<Player> Database::getPlayer(int64_t userId)
 {
     pqxx::work txn(*conn);
 
-    pqxx::result res = txn.exec("SELECT name, chips, wins FROM players WHERE user_id=$1", pqxx::params(userId));
+    pqxx::result res = txn.exec("SELECT name, wins FROM players WHERE user_id=$1", pqxx::params(userId));
 
     if (res.empty()) {
-        return nullptr;
+        return std::shared_ptr<Player>(nullptr);
     }
 
-    auto player = make_shared<Player>(nullptr, userId, res[0]["name"].as<string>(), res[0]["chips"].as<int>());
+    auto player = std::make_shared<Player>(nullptr, userId, res[0]["name"].as<std::string>());
     player->setWins(res[0]["wins"].as<int>());
     return player;
 }
 
-void Database::updatePlayerChips(int64_t userId, int chips)
-{
-    pqxx::work txn(*conn);
-
-    txn.exec("UPDATE players SET chips=$1 WHERE user_id=$2", pqxx::params(chips, userId)).no_rows();
-    txn.commit();
-}
-
-void Database::createRoom(const string &id, int64_t ownerId)
+void Database::createRoom(const std::string &id, int64_t ownerId)
 {
     pqxx::work txn(*conn);
 
     txn.exec("INSERT INTO rooms (id, owner_id) VALUES ($1, $2)"
-                     "ON CONFLICT (id) DO NOTHING",
-                     pqxx::params(id, ownerId)).no_rows();
+             "ON CONFLICT (id) DO NOTHING",
+             pqxx::params(id, ownerId)).no_rows();
     txn.commit();
 }
 
-void Database::updateRoomChips(const string &id, int chips)
+void Database::updateRoomChips(const std::string &id, int chips)
 {
     pqxx::work txn(*conn);
 
@@ -64,17 +56,16 @@ void Database::updateRoomChips(const string &id, int chips)
     txn.commit();
 }
 
-vector<shared_ptr<Room>> Database::getRooms(shared_ptr<Player> player)
+std::vector<std::shared_ptr<Room>> Database::getRooms(std::shared_ptr<Player> player)
 {
     pqxx::work txn(*conn);
-    vector<shared_ptr<Room>> playerRooms;
-
+    std::vector<std::shared_ptr<Room>> playerRooms;
     pqxx::result res = txn.exec("SELECT id, initial_chips FROM rooms WHERE owner_id=$1", pqxx::params(player->getId()));
     printf("Number of rooms: %d\n", res.size());
     if (!res.empty()) 
         for (pqxx::row line : res) {
-            printf("id of room: %s\n", line["id"].as<string>().c_str());
-            playerRooms.push_back(make_shared<Room>(player, line["id"].as<string>(), line["initial_chips"].as<int>()));
+            printf("id of room: %s\n", line["id"].as<std::string>().c_str());
+            playerRooms.push_back(std::make_shared<Room>(player, line["id"].as<std::string>(), line["initial_chips"].as<int>()));
         }
     return playerRooms;
 }

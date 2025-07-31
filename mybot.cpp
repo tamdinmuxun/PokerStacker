@@ -1,26 +1,37 @@
 #include "mybot.h"
 
-unordered_map<int64_t, shared_ptr<Player>> MyBot::players;
-unordered_map<string, shared_ptr<Room>> MyBot::rooms;
+std::unordered_map<int64_t, std::shared_ptr<Player>> MyBot::players;
+std::unordered_map<std::string, std::shared_ptr<Room>> MyBot::rooms;
 Database MyBot::db(conn_str);
 
-pair<shared_ptr<Player>, shared_ptr<Room>> MyBot::getPlayerRoom(int64_t userId)
+void MyBot::regPlayer(Bot &bot, int64_t userId)
 {
+    auto player = MyBot::players[userId] = std::make_shared<Player>(&bot, userId);
+    player->sendMessage("Введите Ваше имя:");
+    player->setState(PlayerState::NAME);
+}
+
+std::pair<std::shared_ptr<Player>, std::shared_ptr<Room>> MyBot::getPlayerRoom(Bot &bot, int64_t userId)
+{
+    printf("%s\n", __PRETTY_FUNCTION__);
     printf("Trying to retrieve player from database\n");
     if (MyBot::players.count(userId)) {
         printf("Player in cache\n");
         auto player = MyBot::players[userId];
         printf("Is nullptr: %d\n", (player==nullptr));
-        auto room = player->getRoom();
+        auto room = player ? player->getRoom() : nullptr;
         return {player, room};
     } else {
         printf("No player in cache\nRetrieving player from database\n");
         try {
             auto player = MyBot::db.getPlayer(userId);
             printf("Retrieved player from database\n");
+            if (!player) {
+                MyBot::regPlayer(bot, userId);
+            }
             MyBot::players[userId] = player;
             return {player, nullptr};
-        } catch (exception &obj) {
+        } catch (std::exception &obj) {
             printf("%s\n", obj.what());
         }
         return {nullptr, nullptr};
@@ -29,37 +40,44 @@ pair<shared_ptr<Player>, shared_ptr<Room>> MyBot::getPlayerRoom(int64_t userId)
 
 void MyBot::handleStart(Bot &bot, int64_t userId)
 {
-    printf("Handle Start\n");
-    auto [player, room] = getPlayerRoom(userId);
+    printf("%s\n", __PRETTY_FUNCTION__);
+    auto [player, room] = getPlayerRoom(bot, userId);
     
     if (!player) {
         printf("No player in database\nRegistering\n");
-        player = MyBot::players[userId] = make_shared<Player>(&bot, userId);
-        player->sendMessage("Введите Ваше имя:");
-        MyBot::players[userId]->setState(PlayerState::NAME);
-        printf("start again\n");
+        regPlayer(bot, userId);
     } else {
         printf("Player found\n");
-        player->setBot(&bot);
-        string message = "С возвращением, " + player->getName() + "!\n" + 
+
+        if (!player->getBot()) {
+            player->setBot(&bot);
+        }
+
+        std::string message = "С возвращением, " + player->getName() + "!\n" + 
             "Если хотите создать новую комнату, отправьте команду /create.\n\
-Если хотите присоединиться к комнате, отправьте команду /join\nСписок ваших комнат\n";
+Если хотите присоединиться к комнате, отправьте команду /join\nСписок ваших комнат:\n";
         int i = 1;
         printf("Retrieving info about player's rooms\n");
+        bool no_rooms = true;
         try {
             for (auto room : db.getRooms(player)) {
+                no_rooms = false;
                 message += std::format("Комната № {}\n", i++) + room->to_string();
             }
-        } catch (exception &e) {
+        } catch (std::exception &e) {
             printf("%s\n", e.what());
+        }
+        if (no_rooms) {
+            message += "Пусто";
         }
         printf("Retrieved\n");
         player->sendMessage(message);
     }
 }
- void MyBot::handleJoin(Bot &bot, int64_t userId)
+void MyBot::handleJoin(Bot &bot, int64_t userId)
 {
-    auto [player, room] = getPlayerRoom(userId);
+    printf("%s\n", __PRETTY_FUNCTION__);
+    auto [player, room] = getPlayerRoom(bot, userId);
     if (player){
         player->setState(PlayerState::ID);
         player->sendMessage("Введите идентификатор комнаты:");
@@ -68,22 +86,24 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
     }
 }
 
- void MyBot::handleCreate(Bot &bot, int64_t userId)
+void MyBot::handleCreate(Bot &bot, int64_t userId)
 {
-    auto [player, r] = getPlayerRoom(userId);
-    shared_ptr<Room> room = make_shared<Room>(player);
+    printf("%s\n", __PRETTY_FUNCTION__);
+    auto [player, r] = getPlayerRoom(bot, userId);
+    std::shared_ptr<Room> room = std::make_shared<Room>(player);
     MyBot::rooms[room->getId()] = room;
+    // TODO CREATE ROOM AT /SAVE COMMAND 
+    // db.createRoom(room->getId(), userId);
 
-    db.createRoom(room->getId(), userId);
+    player->setRoom(room);
+    player->setState(PlayerState::CHIPS);
 
-    MyBot::players[userId]->setRoom(room);
-    MyBot::players[userId]->setState(PlayerState::CHIPS);
-
-    bot.getApi().sendMessage(userId, "Введите начальное количество фишек для каждого игрока:");
+    player->sendMessage("Введите начальное количество фишек для каждого игрока:");
 }
 
- void MyBot::handleLeave(Bot &bot, int64_t userId)
+void MyBot::handleLeave(Bot &bot, int64_t userId)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     auto player = MyBot::players[userId];
 
     if (player == nullptr) return; // ERROR PASS
@@ -96,14 +116,15 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
             MyBot::rooms.erase(room->getId());
         }
     } else {
-        bot.getApi().sendMessage(userId, "Вы не состоите ни в одной комнате");
+        player->sendMessage("Вы не состоите ни в одной комнате");
     }
 }
 
- void MyBot::handleGamble(Bot &bot, int64_t userId)
-{   
+void MyBot::handleGamble(Bot &bot, int64_t userId)
+{
+    printf("%s\n", __PRETTY_FUNCTION__);
+    auto player = MyBot::players[userId];
     try {
-        auto player = MyBot::players[userId];
         if (player == nullptr) {
             return;  // ERROR PASS
         }
@@ -111,14 +132,15 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
         printf("%d\n", room->size());
         room->startGame();
     } catch (NotEnough &) {
-        bot.getApi().sendMessage(userId, "Ошибка. Не хватает игроков.");
+        player->sendMessage("Ошибка. Не хватает игроков.");
     } catch (...) {
-        bot.getApi().sendMessage(userId, "Error! Can't start game.");
+        player->sendMessage("Error! Can't start game.");
     }
 }
 
- void MyBot::handleCall(Bot &bot, int64_t userId)
+void MyBot::handleCall(Bot &bot, int64_t userId)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     auto player = MyBot::players[userId];
     if (player == nullptr) return;  // ERROR PASS
     auto room = player->getRoom();
@@ -130,20 +152,22 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
     room->betting();
 }
 
- void MyBot::handleRaise(Bot &bot, int64_t userId)
+void MyBot::handleRaise(Bot &bot, int64_t userId)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     auto player = MyBot::players[userId];
     if (player == nullptr) return;  // ERROR PASS
     auto room = player->getRoom();
 
     if (room == nullptr) return;  // ERROR PASS
-    bot.getApi().sendMessage(userId, "Введите ставку от " + to_string(room->getCurrentBet() + 1) +
-        " до " + to_string(player->getChips()) + ".");
+    player->sendMessage("Введите ставку от " + std::to_string(room->getCurrentBet() + 1) +
+        " до " + std::to_string(player->getChips()) + ".");
     player->setState(PlayerState::RAISING);
 }
 
- void MyBot::handleFold(Bot &bot, int64_t userId)
+void MyBot::handleFold(Bot &bot, int64_t userId)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     auto player = MyBot::players[userId];
     if (player == nullptr) return;  // ERROR PASS
     auto room = player->getRoom();
@@ -155,14 +179,17 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
     room->betting();
 }
 
- void MyBot::handleStats(Bot &bot, int64_t userId)
+void MyBot::handleStats(Bot &bot, int64_t userId)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     if (MyBot::players[userId] == nullptr) return;  // ERROR PASS
     MyBot::players[userId]->getRoom()->stats();
 }
 
- void MyBot::handleName(Bot &bot, int64_t userId, const string &name)
+
+void MyBot::handleName(Bot &bot, int64_t userId, const std::string &name)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     if (MyBot::players[userId] == nullptr) return;  // ERROR PASS
     MyBot::players[userId]->setName(name);
     MyBot::players[userId]->setState(PlayerState::IDLE);
@@ -174,8 +201,9 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
 Если хотите присоединиться к комнате, отправьте команду /join");
 }
 
- void MyBot::handleId(Bot &bot, int64_t userId, const string &id)
+void MyBot::handleId(Bot &bot, int64_t userId, const std::string &id)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     if (MyBot::rooms.count(id)) {
         if (MyBot::players[userId] == nullptr) return;  // ERROR PASS
 
@@ -188,13 +216,14 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
     }
 }
 
- void MyBot::handleChips(Bot &bot, int64_t userId, const string &text)
+void MyBot::handleChips(Bot &bot, int64_t userId, const std::string &text)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     printf("chips\n");
     try {
         if (MyBot::players[userId] == nullptr) return;  // ERROR PASS
 
-        int chips = strtol(text.c_str(), nullptr, 10);
+        int chips = std::strtol(text.c_str(), nullptr, 10);
         if (MyBot::players[userId] == nullptr) return;  // ERROR PASS
         auto room = MyBot::players[userId]->getRoom();
 
@@ -204,16 +233,17 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
         bot.getApi().sendMessage(userId, "Комната создана! Идентификатор: " + room->getId());
         room->addPlayer(MyBot::players[userId]);
         MyBot::players[userId]->setState(PlayerState::WAITING);
-    } catch (exception &e) {
+    } catch (std::exception &e) {
         printf("%s\n", e.what());
         bot.getApi().sendMessage(userId, "Вы ввели не число, попробуйте еще раз.");
     }
 }
 
- void MyBot::handleRaising(Bot &bot, int64_t userId, const string &text)
+void MyBot::handleRaising(Bot &bot, int64_t userId, const std::string &text)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     try {
-        int bet = strtol(text.c_str(), nullptr, 10);
+        int bet = std::strtol(text.c_str(), nullptr, 10);
         auto player = MyBot::players[userId];
         if (player == nullptr) return;  // ERROR PASS
         auto room = player->getRoom();
@@ -239,10 +269,11 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
     }
 }
 
- void MyBot::handleWinner(Bot &bot, int64_t userId, const string &text)
+void MyBot::handleWinner(Bot &bot, int64_t userId, const std::string &text)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     try {
-        int i = strtol(text.c_str(), nullptr, 10);
+        int i = std::strtol(text.c_str(), nullptr, 10);
         --i;
         auto player = MyBot::players[userId];
         if (player == nullptr) return;  // ERROR PASS
@@ -257,11 +288,12 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
         bot.getApi().sendMessage(userId, "Вы ввели не число, попробуйте еще раз.");
     }
 }
- void MyBot::handleMessage(Bot &bot, Message::Ptr message)
+void MyBot::handleMessage(Bot &bot, Message::Ptr message)
 {
-    printf("message\n");
+    printf("%s\n", __PRETTY_FUNCTION__);
+
     int64_t userId = message->from->id;
-    string text = message->text;
+    std::string text = message->text;
     printf("%s\n", text.c_str());
     PlayerState state = MyBot::players.count(userId) ? MyBot::players[userId]->getState() : PlayerState::IDLE;
     printf("message\n");
@@ -285,9 +317,9 @@ void MyBot::handleStart(Bot &bot, int64_t userId)
     }
 }
 
-
 void MyBot::setCommands()
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     bot.getEvents().onCommand("start", [this](Message::Ptr message) { handleStart(bot, message->from->id); });
     bot.getEvents().onCommand("create", [this](Message::Ptr message) { handleCreate(bot, message->from->id); });
     bot.getEvents().onCommand("join", [this](Message::Ptr message) { handleJoin(bot, message->from->id); });
@@ -302,14 +334,17 @@ void MyBot::setCommands()
     bot.getEvents().onNonCommandMessage([this](Message::Ptr message) { handleMessage(bot, message); });
 
     bot.getEvents().onCommand("help", [this](Message::Ptr message) {
-        string helpText = "📜 Доступные команды:\n";
+        std::string helpText = "📜 Доступные команды:\n";
         helpText += "/start - Начать работу\n";
         helpText += "/create - Создать комнату\n";
         helpText += "/join - Присоединиться к игре\n";
         helpText += "/gamble - Начать игру (создатель)\n";
+        helpText += "/check - Сделать чек\n";
         helpText += "/call - Уравнять ставку\n";
+        helpText += "/bet - Сделать ставку\n";
         helpText += "/raise - Повысить ставку\n";
         helpText += "/fold - Сбросить карты\n";
+        helpText += "/stats - Инофрмация о игроках\n";
         helpText += "/leave - Покинуть комнату\n\n";
         helpText += "Во время игры следуйте инструкциям бота!";
         
@@ -320,9 +355,11 @@ void MyBot::setCommands()
 }
 
 
-void MyBot::setBotCommands() {
+void MyBot::setBotCommands()
+{
+    printf("%s\n", __PRETTY_FUNCTION__);
     try {
-        vector<BotCommand::Ptr> commands;
+        std::vector<BotCommand::Ptr> commands;
 
         // Создаем команды
         BotCommand::Ptr cmdStart(new BotCommand);
@@ -375,23 +412,30 @@ void MyBot::setBotCommands() {
         cmdBet->description = "Сделать ставку";
         commands.push_back(cmdBet);
 
+        BotCommand::Ptr cmdStats(new BotCommand);
+        cmdStats->command = "stats";
+        cmdStats->description = "Информация об игроках";
+        commands.push_back(cmdStats);
+
         // Устанавливаем команды
         bot.getApi().setMyCommands(commands);
         
-        printf("Команды бота успешно зарегистрированы");
+        printf("Команды бота успешно зарегистрированы\n");
     } catch (TgException& e) {
-        cerr << "Ошибка установки команд бота: " << e.what() << endl;
+        std::cerr << "Ошибка установки команд бота: " << e.what() << std::endl;
     }
 }
 
-void MyBot::skipPendingUpdates(Bot& bot) {
+void MyBot::skipPendingUpdates(Bot& bot)
+{
+    printf("%s\n", __PRETTY_FUNCTION__);
     try {
         int lastUpdateId = 0;
         bool hasUpdates = true;
         
         while (hasUpdates) {
             // Получаем пачку обновлений (максимум 100 за раз)
-            auto updates = bot.getApi().getUpdates(lastUpdateId, 100, 0);
+            auto updates = bot.getApi().getUpdates(lastUpdateId, 10, 0);
             
             if (updates.empty()) {
                 hasUpdates = false;
@@ -405,20 +449,21 @@ void MyBot::skipPendingUpdates(Bot& bot) {
         // Фиксируем последний ID как обработанный
         bot.getApi().getUpdates(lastUpdateId, 1, 0);
         printf("All pending updates skipped\n");
-    } catch (const exception& e) {
+    } catch (const std::exception& e) {
         fprintf(stderr, "Error skipping updates: %s\n", e.what());
     }
 }
 
 void MyBot::run()
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     try {
         skipPendingUpdates(bot);
         TgLongPoll longPoll(bot);
         while (true) {
             longPoll.start();
         }
-    } catch (exception &e) {
+    } catch (std::exception &e) {
         printf("%s\n", e.what());
         fprintf(stderr  , "Произошла ошибка и бот закрылся");
     }

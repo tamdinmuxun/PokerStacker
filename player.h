@@ -25,37 +25,42 @@ class Player
     Bot *bot;
     int64_t id;
     PlayerState state;
-    string name;
+    std::string name;
     int chips;
-    int currentBet;
+    int current_bet;
     bool fold{};
-    bool allIn{};
-    weak_ptr<Room> room{shared_ptr<Room>(nullptr)};
+    bool all_in{};
+    std::weak_ptr<Room> room{std::shared_ptr<Room>(nullptr)};
     int wins{};
 public:
     Player(Bot *bot = nullptr,
            int64_t id = 0,
-           const string &name = "",
+           const std::string &name = "",
            int chips = 1000,
            PlayerState state = PlayerState::IDLE,
-           int currentBet = 0) :
+           int current_bet = 0) :
     bot(bot),
     id(id),
     name(name),
     chips(chips),
-    currentBet(currentBet),
+    current_bet(current_bet),
     state(state)
     {}
 
-    void sendMessage(string s)
+    void sendMessage(std::string s)
     {
         try {
             if (bot) {
                 bot->getApi().sendMessage(id, s);
             }
         } catch (...) {
-            cerr << "Error sending message to " << id << endl;
+            std::cerr << "Error sending message to " << id << std::endl;
         }
+    }
+
+    auto getBot() const noexcept
+    {
+        return bot;
     }
 
     void setBot(Bot *b)
@@ -87,11 +92,11 @@ public:
         state = s;
     }
 
-    void setName(const string &s) {
+    void setName(const std::string &s) {
         name = s;
     }
 
-    string getName() const noexcept
+    std::string getName() const noexcept
     {
         return name;
     }
@@ -106,14 +111,14 @@ public:
         return room.lock();
     }
 
-    void setRoom(shared_ptr<Room> r)
+    void setRoom(std::shared_ptr<Room> r)
     {
         room = r;
     }
 
     int getCurrentBet() const noexcept
     {
-        return currentBet;
+        return current_bet;
     }
 
     int getChips() const noexcept
@@ -142,7 +147,7 @@ public:
 
     bool isAllIn() const noexcept
     {
-        return allIn;
+        return all_in;
     }
 
     void setFold(bool f)
@@ -154,10 +159,10 @@ public:
 
     void setAllIn(bool f)
     {
-        allIn = f;
+        all_in = f;
     }
 
-    string getStatus() const noexcept;
+    std::string getStatus() const noexcept;
 
     void small();
 
@@ -169,6 +174,6 @@ public:
 
     int commit();
 
-    string to_string();
+    std::string to_string();
 };
 #endif

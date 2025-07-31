@@ -1,15 +1,12 @@
 #include "player.h"
 
-string Player::to_string()
+std::string Player::to_string()
 {
-    return "Игрок: " + name + "\n" + 
-           "Баланс: " + std::to_string(chips) + "\n" +
-           "Текущая ставка: " + std::to_string(currentBet) + "\n" + 
-           "Количество побед: " + std::to_string(wins) + "\n" + 
-           "Статус: " + getStatus();
+    return std::format("Игрок: {}\nБаланс: {}\nТекущая ставка: {}\nКоличество побед: {}\nСтатус: {}.",
+           name, chips, current_bet, wins, getStatus());
 }
 
-string Player::getStatus() const noexcept
+std::string Player::getStatus() const noexcept
 {
     switch (state) {
     case PlayerState::WAITING:
@@ -56,20 +53,21 @@ void Player::notifyPlayer(int bet)
 
 void Player::makeBet(int bet)
 {
-    currentBet = bet;
-    if (currentBet == chips) {
-        allIn = true;
+    if (bet >= chips) {
+        all_in = true;
     }
-    sendMessage("Вы поставили " + std::to_string(bet) + " фишек. Осталось: " +
-        std::to_string(chips - bet) + ".");
+    current_bet = all_in ? chips : bet;
+
+    sendMessage((all_in ? "Ва-Банк! " : "") + std::format("Вы поставили: {} фишек. Осталось: {}.",
+                current_bet, chips - current_bet));
 }
 
 int Player::commit()
 {
-    int tmp = currentBet;
+    int tmp = current_bet;
     fold = false;
-    allIn = false;
-    currentBet = 0;
+    all_in = false;
+    current_bet = 0;
     chips -= tmp;
     return tmp;
 }

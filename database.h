@@ -8,21 +8,19 @@
 
 class Database
 {
-    shared_ptr<pqxx::connection> conn;
+    std::shared_ptr<pqxx::connection> conn;
 public:
-    Database(const string &s);
+    Database(const std::string &s);
 
-    void createPlayer(int64_t userId, const string &name);
+    void createPlayer(int64_t userId, const std::string &name);
 
-    shared_ptr<Player> getPlayer(int64_t userId);
+    std::shared_ptr<Player> getPlayer(int64_t userId);
 
-    void updatePlayerChips(int64_t userId, int chips);
+    void createRoom(const std::string &id, int64_t ownerId);
 
-    void createRoom(const string &id, int64_t ownerId);
+    void updateRoomChips(const std::string &id, int chips);
 
-    void updateRoomChips(const string &id, int chips);
-
-    vector<shared_ptr<Room>> getRooms(shared_ptr<Player>);
+    std::vector<std::shared_ptr<Room>> getRooms(std::shared_ptr<Player>);
 };
 
 #endif

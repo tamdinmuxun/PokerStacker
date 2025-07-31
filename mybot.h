@@ -11,15 +11,17 @@ class MyBot
     Bot bot;
     static Database db;
 
-    static unordered_map<int64_t, shared_ptr<Player>> players;
-    static unordered_map<string, shared_ptr<Room>> rooms;
+    static std::unordered_map<int64_t, std::shared_ptr<Player>> players;
+    static std::unordered_map<std::string, std::shared_ptr<Room>> rooms;
 public:
-    MyBot(string token) : bot(token) {
+    MyBot(std::string token) : bot(token) {
         setCommands();
         setBotCommands();
     }
 
-    static pair<shared_ptr<Player>, shared_ptr<Room>> getPlayerRoom(int64_t userId);
+    static std::pair<std::shared_ptr<Player>, std::shared_ptr<Room>> getPlayerRoom(Bot &bot, int64_t userId);
+
+    static void regPlayer(Bot &bot, int64_t userId);
 
     static void handleStart(Bot &bot, int64_t userId);
 
@@ -49,15 +51,15 @@ public:
 
     static void handleStats(Bot &bot, int64_t userId);
 
-    static void handleName(Bot &bot, int64_t userId, const string &name);
+    static void handleName(Bot &bot, int64_t userId, const std::string &name);
 
-    static void handleId(Bot &bot, int64_t userId, const string &id);
+    static void handleId(Bot &bot, int64_t userId, const std::string &id);
 
-    static void handleChips(Bot &bot, int64_t userId, const string &text);
+    static void handleChips(Bot &bot, int64_t userId, const std::string &text);
 
-    static void handleRaising(Bot &bot, int64_t userId, const string &text);
+    static void handleRaising(Bot &bot, int64_t userId, const std::string &text);
 
-    static void handleWinner(Bot &bot, int64_t userId, const string &text);
+    static void handleWinner(Bot &bot, int64_t userId, const std::string &text);
 
     static void handleMessage(Bot &bot, Message::Ptr message);
 

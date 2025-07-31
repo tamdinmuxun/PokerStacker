@@ -8,9 +8,9 @@ int main(int argc, char **argv)
     printf("start main\n");
     fflush(stdout);
 
-    string token;
+    std::string token;
     if (argc == 2) {
-        token = string(argv[1]);
+        token = std::string(argv[1]);
     } else {
         fprintf(stderr, "Error: no token");
         exit(1);

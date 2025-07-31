@@ -1,12 +1,11 @@
 #include "room.h"
 
-string Room::to_string()
+std::string Room::to_string()
 {
-    return "Идентификатор комнаты: " + id + "\n" +
-           "Начальный стек: " + std::to_string(initialChips) + "\n";
+    return std::format("Идентификатор комнаты: {}\nНачальный стек: {}.", id, initial_chips);
 }
 
-void Room::addPlayer(shared_ptr<Player> player)
+void Room::addPlayer(std::shared_ptr<Player> player)
 {
     order.push_back(player);
 
@@ -16,7 +15,7 @@ void Room::addPlayer(shared_ptr<Player> player)
     }
 }
 
-void Room::removePlayer(shared_ptr<Player> player)
+void Room::removePlayer(std::shared_ptr<Player> player)
 {
 
     for (auto p = order.begin(); p != order.end(); ++p) {
@@ -45,17 +44,17 @@ void Room::removePlayer(shared_ptr<Player> player)
 void Room::nextPlayer()
 {
     do {
-        curPlayer = (curPlayer + 1) % order.size(); 
-    } while (curPlayer != last && (order[curPlayer]->isFolded() || order[curPlayer]->isAllIn()));
+        cur_player = (cur_player + 1) % order.size(); 
+    } while (cur_player != last && (order[cur_player]->isFolded() || order[cur_player]->isAllIn()));
     
-    if (curPlayer == last && (order[curPlayer]->isFolded() || order[curPlayer]->isAllIn())) {
+    if (cur_player == last && (order[cur_player]->isFolded() || order[cur_player]->isAllIn())) {
         endRound();
     }
 }
 
 void Room::updateLast()
 {
-    last = (curPlayer - 1 + order.size()) % order.size();
+    last = (cur_player - 1 + order.size()) % order.size();
 }
 
 void Room::startGame()
@@ -64,7 +63,7 @@ void Room::startGame()
         throw NotEnough();
     }
     for (auto player : order) {
-        player->setChips(initialChips);
+        player->setChips(initial_chips);
     }
     diller = diller == -1 ? rnd(rng) % order.size() : (diller + 1) % order.size();
     order[diller]->sendMessage("В этой игре вы диллер.");
@@ -72,7 +71,7 @@ void Room::startGame()
     for (auto player : order) {
         player->setState(PlayerState::GAMBLING);
         player->sendMessage("Игра началась! Ваш начальный баланс: " +
-            std::to_string(initialChips) + ". Диллер: " + order[diller]->getName());
+            std::to_string(initial_chips) + ". Диллер: " + order[diller]->getName());
     }
     
     preflop();
@@ -91,20 +90,20 @@ void Room::preflop()
 
     order[sb]->small();
     order[bb]->big();
-    currentBet = BIG_BLIND;
-    curPlayer = (bb + 1) % order.size();
+    current_bet = BIG_BLIND;
+    cur_player = (bb + 1) % order.size();
     last = bb;
 
-    order[curPlayer]->notifyPlayer(currentBet);
+    order[cur_player]->notifyPlayer(current_bet);
 }
 
 void Room::startRound()
 {
-    currentBet = 0;
-    curPlayer = (diller + 1) % order.size();
+    current_bet = 0;
+    cur_player = (diller + 1) % order.size();
     updateLast();
 
-    order[curPlayer]->notifyPlayer(currentBet);
+    order[cur_player]->notifyPlayer(current_bet);
 }
 
 void Room::betting()
@@ -119,22 +118,22 @@ void Room::betting()
     }
     if (folded == order.size() - 1) {
         endGame(winner);
-    } else if (curPlayer == last) {
+    } else if (cur_player == last) {
         endRound();
     } else {
         nextPlayer();
-        order[curPlayer]->notifyPlayer(currentBet);
+        order[cur_player]->notifyPlayer(current_bet);
     }
 }
 
 void Room::endRound()
 {
     for (auto player : order) {
-        totalPot += player->commit();
+        total_pot += player->commit();
     }
     for (auto player : order) {
         player->sendMessage("Раунд окончен. Общий банк: " + 
-            std::to_string(totalPot) + " фишек.");
+            std::to_string(total_pot) + " фишек.");
     }
     if (state == GameState::FINAL) return;
 
@@ -152,7 +151,7 @@ void Room::endGame(int winner)
 {
     if (winner == -1) {
         int cnt = 1;
-        string message = "Кто победил?\n";
+        std::string message = "Кто победил?\n";
         for (auto player : order) {
             message += std::to_string(cnt++) + ". " + player->getName() + "\n";
         }
@@ -161,7 +160,7 @@ void Room::endGame(int winner)
     } else {
         state = GameState::FINAL;
         endRound();
-        order[winner]->addChips(totalPot);
+        order[winner]->addChips(total_pot);
 
         for (auto player : order) {
             player->sendMessage("Победитель: " + order[winner]->getName() + "!");
@@ -171,7 +170,7 @@ void Room::endGame(int winner)
 
 void Room::stats() const noexcept
 {
-    string message = "Начальный стек: " + std::to_string(initialChips) + " фишек\n";
+    std::string message = "Начальный стек: " + std::to_string(initial_chips) + " фишек\n";
     message += "Игроки за столом:\n";
 
     int index = 1;

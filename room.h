@@ -2,6 +2,7 @@
 #define MULTI_PLAYER_ROOM
 
 #include "player.h"
+#include "pot.h"
 #include <vector>
 
 enum class GameState {
@@ -15,25 +16,24 @@ enum class GameState {
 
 class Room
 {
-    shared_ptr<Player> owner;
-    string id;
-    int initialChips;
-    bool gameStarted{false};
-    int64_t totalPot{};
-    vector<shared_ptr<Player>> order;
+    std::shared_ptr<Player> owner;
+    std::string id;
+    int initial_chips;
+    int64_t total_pot{};
+    std::vector<std::shared_ptr<Player>> order{};
     int diller{-1};
-    int currentBet{};
+    int current_bet{};
     int sb{-1}, bb{-1};
-    int curPlayer{};
+    int cur_player{};
     int last{};
     GameState state{GameState::PREFLOP};
+    std::vector<Pot> side_pots{};
 public:
-    Room(shared_ptr<Player> owner = nullptr, 
-         string _id = "",
-         int initialChips = 0,
-         vector<shared_ptr<Player>> order = vector<shared_ptr<Player>>()) :
+    Room(std::shared_ptr<Player> owner = nullptr, 
+         std::string _id = "",
+         int initial_chips = 0) :
     owner(owner),
-    initialChips(initialChips)
+    initial_chips(initial_chips)
     {
         if (_id == "") {
             id = generateRoomId();
@@ -42,7 +42,7 @@ public:
         }
     }
 
-    string getId() const noexcept
+    std::string getId() const noexcept
     {
         return id;
     }
@@ -53,27 +53,27 @@ public:
             fprintf(stderr, "Error! Initial number of chips can't be negative!\n");
             return;
         }
-        initialChips = chips;
+        initial_chips = chips;
     }
 
     int getInitialChips() const noexcept
     {
-        return initialChips;
+        return initial_chips;
     }
 
     int getCurrentBet() const noexcept
     {
-        return currentBet;
+        return current_bet;
     }
 
     void setBet(int bet)
     {
-        currentBet = bet;
+        current_bet = bet;
     }
 
-    void addPlayer(shared_ptr<Player> player);
+    void addPlayer(std::shared_ptr<Player> player);
 
-    void removePlayer(shared_ptr<Player> player);
+    void removePlayer(std::shared_ptr<Player> player);
 
     void nextPlayer();
 
@@ -103,7 +103,7 @@ public:
         return order.size();
     }
 
-    string to_string();
+    std::string to_string();
 
     ~Room()
     {
