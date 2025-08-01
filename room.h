@@ -47,6 +47,11 @@ public:
         return id;
     }
 
+    void setOwner(std::shared_ptr<Player> player)
+    {
+        owner = player;
+    }
+
     void setChips(int chips) noexcept
     {
         if (chips < 0) {
@@ -71,7 +76,7 @@ public:
         current_bet = bet;
     }
 
-    void addPlayer(std::shared_ptr<Player> player);
+    bool addPlayer(std::shared_ptr<Player> player);
 
     void removePlayer(std::shared_ptr<Player> player);
 
@@ -90,6 +95,10 @@ public:
     void endRound();
 
     void endGame(int winner = -1);
+
+    void sendMessageToAll(const std::string &) const noexcept;
+
+    void sendMessageToAllExcept(const std::string&, std::shared_ptr<Player>) const noexcept;
 
     void stats() const noexcept;
 

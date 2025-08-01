@@ -11,39 +11,62 @@ Database::Database(const std::string &s)
     }
 }
 
-void Database::createPlayer(int64_t userId, const std::string &name)
+void Database::createPlayer(int64_t user_id, const std::string &name)
 {
     pqxx::work txn(*conn);
     txn.exec(
         "INSERT INTO players (user_id, name) VALUES ($1, $2) "
         "ON CONFLICT (user_id) DO NOTHING",
-        pqxx::params(userId, name)).no_rows();
+        pqxx::params(user_id, name)).no_rows();
     txn.commit();
 
 }
 
-std::shared_ptr<Player> Database::getPlayer(int64_t userId)
+std::shared_ptr<Player> Database::getPlayer(int64_t user_id)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     pqxx::work txn(*conn);
 
-    pqxx::result res = txn.exec("SELECT name, wins FROM players WHERE user_id=$1", pqxx::params(userId));
+    pqxx::result res = txn.exec("SELECT name, wins FROM players WHERE user_id=$1", pqxx::params(user_id));
 
     if (res.empty()) {
         return std::shared_ptr<Player>(nullptr);
     }
 
-    auto player = std::make_shared<Player>(nullptr, userId, res[0]["name"].as<std::string>());
+    auto player = std::make_shared<Player>(nullptr, user_id, res[0]["name"].as<std::string>());
     player->setWins(res[0]["wins"].as<int>());
     return player;
 }
 
-void Database::createRoom(const std::string &id, int64_t ownerId)
+void Database::createRoom(const std::string &id, int64_t owner_id)
 {
     pqxx::work txn(*conn);
 
     txn.exec("INSERT INTO rooms (id, owner_id) VALUES ($1, $2)"
              "ON CONFLICT (id) DO NOTHING",
-             pqxx::params(id, ownerId)).no_rows();
+             pqxx::params(id, owner_id)).no_rows();
+    txn.commit();
+}
+
+std::pair<int64_t, std::shared_ptr<Room>> Database::getRoom(const std::string &id)
+{
+    pqxx::work txn(*conn);
+
+    pqxx::result res = txn.exec("SELECT owner_id, initial_chips FROM rooms WHERE id=$1", pqxx::params(id));
+
+    if (res.empty()) {
+        return {0, std::shared_ptr<Room>(nullptr)};
+    }
+
+    return {res[0]["owner_id"].as<int64_t>(), std::make_shared<Room>(nullptr, id, res[0]["initial_chips"].as<int>())};
+}
+
+void Database::updateRoomOwner(const std::string &id, int64_t owner_id)
+{
+    pqxx::work txn(*conn);
+
+    txn.exec("UPDATE rooms SET owner_id=$1 WHERE id=$2", pqxx::params(owner_id, id)).no_rows();
+
     txn.commit();
 }
 

@@ -1,7 +1,6 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include "common.h"
 #include "player.h"
 #include "room.h"
 #include <pqxx/pqxx>
@@ -16,9 +15,13 @@ public:
 
     std::shared_ptr<Player> getPlayer(int64_t userId);
 
-    void createRoom(const std::string &id, int64_t ownerId);
+    void createRoom(const std::string &id, int64_t owner_id);
+
+    std::pair<int64_t, std::shared_ptr<Room>> getRoom(const std::string &id);
 
     void updateRoomChips(const std::string &id, int chips);
+
+    void updateRoomOwner(const std::string &id, int64_t owner_id);
 
     std::vector<std::shared_ptr<Room>> getRooms(std::shared_ptr<Player>);
 };

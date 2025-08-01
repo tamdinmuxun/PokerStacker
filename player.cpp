@@ -43,8 +43,7 @@ void Player::big()
 void Player::notifyPlayer(int bet)
 {
     if (bet > 0) {
-        sendMessage("Ваш ход. Текущая ставка: " + std::to_string(bet) + 
-            ". Отправьте одну из команд:\n/call\n/raise\n/fold"); 
+        sendMessage(std::format("Ваш ход. Текущая ставка: {}.\nОтправьте одну из команд:\n/call\n/raise\n/fold", bet)); 
     } else {
         sendMessage("Ваш ход. Никто еще ничего не поставил. \
             Отправьте одну из команд:\n/check\n/bet\n/fold"); 
@@ -55,6 +54,7 @@ void Player::makeBet(int bet)
 {
     if (bet >= chips) {
         all_in = true;
+        state = PlayerState::ALL_IN;
     }
     current_bet = all_in ? chips : bet;
 

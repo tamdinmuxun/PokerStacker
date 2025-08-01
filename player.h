@@ -17,7 +17,8 @@ enum class PlayerState {
     CALLED,
     CHECKED,
     BET,
-    FOLDED
+    FOLDED,
+    ALL_IN
 };
 
 class Player
@@ -47,14 +48,14 @@ public:
     state(state)
     {}
 
-    void sendMessage(std::string s)
+    void sendMessage(std::string s) const noexcept
     {
         try {
             if (bot) {
                 bot->getApi().sendMessage(id, s);
             }
-        } catch (...) {
-            std::cerr << "Error sending message to " << id << std::endl;
+        } catch (std::exception &e) {
+            printf("%s\n", e.what());
         }
     }
 
@@ -113,7 +114,7 @@ public:
 
     void setRoom(std::shared_ptr<Room> r)
     {
-        room = r;
+        room = std::weak_ptr<Room>(r);
     }
 
     int getCurrentBet() const noexcept

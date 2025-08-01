@@ -1,6 +1,7 @@
 #ifndef MY_BOT
 #define MY_BOT
 
+#include "player.h"
 #include "room.h"
 #include "database.h"
 #include <format>
@@ -19,7 +20,7 @@ public:
         setBotCommands();
     }
 
-    static std::pair<std::shared_ptr<Player>, std::shared_ptr<Room>> getPlayerRoom(Bot &bot, int64_t userId);
+    static std::pair<std::shared_ptr<Player>, std::shared_ptr<Room>> getPlayerRoom(Bot &, int64_t, const std::string &room_id = "");
 
     static void regPlayer(Bot &bot, int64_t userId);
 

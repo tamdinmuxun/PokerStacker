@@ -1,18 +1,51 @@
 #include "room.h"
 
+std::string to_string(GameState state)
+{
+    switch(state) {
+    case GameState::PREFLOP:    return "Префлоп";
+    case GameState::FLOP:       return "Флоп. Выложите 3 карты на стол.";
+    case GameState::TURN:       return "Тёрн. Выложите 4-ую карту на стол.";
+    case GameState::RIVER:      return "Ривер. Выложите 5-ую карту на стол.";
+    case GameState::SHOWDOWN:   return "Шоудаун. Вскрываемся.";
+    case GameState::FINAL:      return "Финал.";
+    }
+}
+
 std::string Room::to_string()
 {
     return std::format("Идентификатор комнаты: {}\nНачальный стек: {}.", id, initial_chips);
 }
 
-void Room::addPlayer(std::shared_ptr<Player> player)
+void Room::sendMessageToAll(const std::string &message) const noexcept
 {
-    order.push_back(player);
-
     for (auto p : order) {
-        p->sendMessage("Игрок " + player->getName() + " присоединился к комнате!" +
-            "Текущеее количество игроков: " + std::to_string(order.size()));
+        p->sendMessage(message);
     }
+}
+
+void Room::sendMessageToAllExcept(const std::string &message, std::shared_ptr<Player> player) const noexcept
+{
+    for (auto p : order) {
+        if (p->getId() != player->getId()) {
+            p->sendMessage(message);
+        }
+    }
+}
+
+bool Room::addPlayer(std::shared_ptr<Player> player)
+{
+    for (auto p : order) {
+        if (p->getId() == player->getId()) {
+            p->sendMessage("Вы уже находитесь в данной комнате!");
+            return false;
+        }
+    }
+    player->setChips(initial_chips);
+    order.push_back(player);
+    sendMessageToAllExcept(std::format("Игрок {} присоединился к комнате!\nТекущеее количество игроков: {}",
+        player->getName(), order.size()), player);
+    return true;
 }
 
 void Room::removePlayer(std::shared_ptr<Player> player)
@@ -26,18 +59,12 @@ void Room::removePlayer(std::shared_ptr<Player> player)
     }
     player->setRoom(nullptr);
 
-    for (auto p : order) {
-        p->sendMessage("Игрок " + player->getName() + " вышел из комнаты(." +
-        "Текущеее количество игроков: " + std::to_string(order.size()));
-    }
+    sendMessageToAll(std::format("Игрок {} вышел из комнаты(.\nТекущеее количество игроков: {}",
+        player->getName(), order.size()));
 
     if (player->getId() == owner->getId() && order.size()) {
         owner = order[0];
-        for (auto p : order) {
-            p->sendMessage("А он был создателем. Теперь права админа переходят игроку " + 
-                order[0]->getName() + ".");
-
-        }
+        sendMessageToAll(std::format("А он был создателем. Теперь права админа переходят игроку {}.", order[0]->getName()));
     }
 }
 
@@ -68,10 +95,10 @@ void Room::startGame()
     diller = diller == -1 ? rnd(rng) % order.size() : (diller + 1) % order.size();
     order[diller]->sendMessage("В этой игре вы диллер.");
 
+    sendMessageToAll(std::format("Игра началась! Ваш начальный баланс: {}. Диллер: {}.", initial_chips, order[diller]->getName()));
+
     for (auto player : order) {
         player->setState(PlayerState::GAMBLING);
-        player->sendMessage("Игра началась! Ваш начальный баланс: " +
-            std::to_string(initial_chips) + ". Диллер: " + order[diller]->getName());
     }
     
     preflop();
@@ -79,14 +106,12 @@ void Room::startGame()
 
 void Room::preflop()
 {
+    sendMessageToAll("Ставки сразу после раздачи карт.");
     state = GameState::PREFLOP;
     sb = (diller + 1) % order.size();
     bb = (diller + 2) % order.size();
-    // notify
-    for (auto player : order) {
-        player->sendMessage("Малый блайнд 5 денег: " + order[sb]->getName() +
-            + ".\nБольшой блайнд 10 денег: " + order[bb]->getName() + ".");
-    }
+
+    sendMessageToAll(std::format("Малый блайнд 5 денег: {}.\nnБольшой блайнд 10 денег: {}.", order[sb]->getName(), order[bb]->getName()));
 
     order[sb]->small();
     order[bb]->big();
@@ -131,13 +156,12 @@ void Room::endRound()
     for (auto player : order) {
         total_pot += player->commit();
     }
-    for (auto player : order) {
-        player->sendMessage("Раунд окончен. Общий банк: " + 
-            std::to_string(total_pot) + " фишек.");
-    }
+    sendMessageToAll(std::format("Раунд окончен. Общий банк: {} фишек.", total_pot));
+
     if (state == GameState::FINAL) return;
 
     state = GameState(static_cast<int>(state) + 1);
+    sendMessageToAll(::to_string(state));
     switch (state) {
     case GameState:: SHOWDOWN:
         endGame();
@@ -145,6 +169,7 @@ void Room::endRound()
     default:
         startRound();
     }
+    
 }
 
 void Room::endGame(int winner)
@@ -153,7 +178,7 @@ void Room::endGame(int winner)
         int cnt = 1;
         std::string message = "Кто победил?\n";
         for (auto player : order) {
-            message += std::to_string(cnt++) + ". " + player->getName() + "\n";
+            message += std::format("{}. {}\n", cnt++, player->getName());
         }
         owner->sendMessage(message);
         owner->setState(PlayerState::WINNER);
@@ -162,24 +187,18 @@ void Room::endGame(int winner)
         endRound();
         order[winner]->addChips(total_pot);
 
-        for (auto player : order) {
-            player->sendMessage("Победитель: " + order[winner]->getName() + "!");
-        }
+        sendMessageToAll(std::format("Победитель: {}!", order[winner]->getName()));
     }
 }
 
 void Room::stats() const noexcept
 {
-    std::string message = "Начальный стек: " + std::to_string(initial_chips) + " фишек\n";
+    std::string message = std::format("Начальный стек: {} фишек\n", initial_chips);
     message += "Игроки за столом:\n";
 
     int index = 1;
     for (const auto& player : order) {
-        message += std::to_string(index++) + ". " + player->getName() + "\nВсего:" + std::to_string(player->getChips()) + " фишек\n" +
-        "Текущая ставка: " + std::to_string(player->getCurrentBet()) + "\nСтатус: " + player->getStatus() + "\n";
+        message += std::format("{}. {}\nВсего: {} фишек\nТекущая ставка: {}\nСтатус: {}.\n", index++, player->getName(), player->getChips(), player->getCurrentBet(), player->getStatus());
     }
-    
-    for (const auto &player : order) {
-        player->sendMessage(message);
-    }
+    sendMessageToAll(message);
 }

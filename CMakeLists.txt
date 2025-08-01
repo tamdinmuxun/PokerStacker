@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.0)
 
-project(PokerStack)
+project(PokerStacker)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -30,7 +30,7 @@ endif()
 
 
 
-add_executable(PokerStack main.cpp mybot.cpp room.cpp player.cpp database.cpp common.cpp)
+add_executable(PokerStacker main.cpp mybot.cpp room.cpp player.cpp database.cpp common.cpp)
 
 find_package(PkgConfig REQUIRED)
 

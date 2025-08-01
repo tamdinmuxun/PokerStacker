@@ -3,19 +3,23 @@
 using namespace TgBot;
 
 
-int main(int argc, char **argv)
+int main()
 {
     printf("start main\n");
     fflush(stdout);
 
-    std::string token;
-    if (argc == 2) {
-        token = std::string(argv[1]);
-    } else {
-        fprintf(stderr, "Error: no token");
+    std::string token(getenv("TOKEN"));
+    if (token == "") {
+        printf("No bot token variable in environment\n");
         exit(1);
     }
     MyBot bot(token);
     printf("bot initialized\n");
+    
+    signal(SIGINT, [](int s) {
+        printf("SIGINT got\n");
+        exit(0);
+    });
+
     bot.run();
 }
