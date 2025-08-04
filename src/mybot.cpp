@@ -1,4 +1,4 @@
-#include "mybot.h"
+#include "headers/mybot.h"
 
 std::unordered_map<int64_t, std::shared_ptr<Player>> MyBot::players;
 std::unordered_map<std::string, std::shared_ptr<Room>> MyBot::rooms;

@@ -1,4 +1,4 @@
-#include "player.h"
+#include "headers/player.h"
 
 std::string Player::to_string()
 {

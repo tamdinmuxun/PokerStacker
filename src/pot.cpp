@@ -1,4 +1,4 @@
-#include "pot.h"
+#include "headers/pot.h"
 
 void Pot::addPlayer(std::shared_ptr<Player> player)
 {

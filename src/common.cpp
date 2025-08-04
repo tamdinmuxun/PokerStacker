@@ -1,4 +1,4 @@
-#include "common.h"
+#include "headers/common.h"
 
 std::mt19937 rng(std::chrono::steady_clock::now().time_since_epoch().count());
 std::uniform_int_distribution<int> rnd(0, static_cast<int>(1e9));
