@@ -23,6 +23,8 @@ std::string Player::getStatus() const noexcept
         return "Сбросил карты.";
     case PlayerState::GAMBLING:
         return "Жеский гэмблинг.";
+    case PlayerState::REGAMBLING:
+        return "Жду новой игры.";
     default:
         return "Сплю.";
     }
@@ -65,8 +67,6 @@ void Player::makeBet(int bet)
 int Player::commit()
 {
     int tmp = current_bet;
-    fold = false;
-    all_in = false;
     current_bet = 0;
     chips -= tmp;
     return tmp;

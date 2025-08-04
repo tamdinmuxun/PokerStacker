@@ -18,7 +18,8 @@ enum class PlayerState {
     CHECKED,
     BET,
     FOLDED,
-    ALL_IN
+    ALL_IN,
+    REGAMBLING
 };
 
 class Player
@@ -81,6 +82,11 @@ public:
             return;
         }
         wins = w;
+    }
+
+    void addWins() noexcept
+    {
+        ++wins;
     }
 
     int getWins() const noexcept

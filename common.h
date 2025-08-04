@@ -1,11 +1,14 @@
 #ifndef FWD_DECL
 #define FWD_DECL
 
+#include <algorithm>
 #include <cstdio>
 #include <chrono>
 #include <exception>
 #include <random>
+#include <sstream>
 #include <string>
+#include <thread>
 #include <tgbot/tgbot.h>
 
 using namespace TgBot;
@@ -14,6 +17,7 @@ class Player;
 class Room;
 class MyBot;
 class Pot;
+class Database;
 
 // ERROR CLASSES
 // TO-DO INHERIT FROM STD::EXCEPTION OR SOMETHING

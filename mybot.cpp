@@ -157,8 +157,9 @@ void MyBot::handleGamble(Bot &bot, int64_t user_id)
     try {
         if (!room) {
             player->sendMessage("Вы не состоите ни в одной комнате!\nПрисоединиться /join\nСоздать /create");
+            return;
         }
-        printf("%d\n", room->size());
+        room->updatePlayers(db);
         room->startGame();
     } catch (NotEnough &) {
         player->sendMessage("К сожалению, Вы не можете играть в гордом одиночестве(.");
@@ -200,12 +201,14 @@ void MyBot::handleRaise(Bot &bot, int64_t user_id)
 void MyBot::handleFold(Bot &bot, int64_t user_id)
 {
     printf("%s\n", __PRETTY_FUNCTION__);
-    auto player = MyBot::players[user_id];
+    auto [player, room] = getPlayerRoom(bot, user_id);
     if (!player) return;  // ERROR PASS
-    auto room = player->getRoom();
 
-    if (!room) return;  // ERROR PASS
-
+    if (!room) {
+        player->sendMessage("Вы не состоите ни в одной комнате!");
+    }
+    printf("folding\n");
+    fflush(stdout);
     player->setFold(true);
 
     room->betting();
@@ -305,19 +308,25 @@ void MyBot::handleWinner(Bot &bot, int64_t user_id, const std::string &text)
 {
     printf("%s\n", __PRETTY_FUNCTION__);
     try {
-        int i = std::strtol(text.c_str(), nullptr, 10);
-        --i;
-        auto player = MyBot::players[user_id];
+        std::istringstream split(text);
+        std::vector<int> winners;
+        int i{};
+        while (split >> i) {
+            winners.push_back(--i);
+        }
+
+        auto [player, room] = getPlayerRoom(bot, user_id);
         if (player == nullptr) return;  // ERROR PASS
-
-        auto room = MyBot::players[user_id]->getRoom();
         
-        if (room == nullptr) return;  // ERROR PASS
+        if (room == nullptr) {
+            player->sendMessage("Вы не состоите ни в одной комнате.");
+            return;
+        }
 
-        room->endGame(i);
-        MyBot::players[user_id]->setState(PlayerState::IDLE);
-    } catch (...) {
+        room->distributePot(winners);
+    } catch (std::exception &e) {
         bot.getApi().sendMessage(user_id, "Вы ввели не число, попробуйте еще раз.");
+        printf("%s\n", e.what());
     }
 }
 void MyBot::handleMessage(Bot &bot, Message::Ptr message)

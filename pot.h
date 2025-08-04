@@ -5,13 +5,18 @@
 
 class Pot
 {
-    int totalPot;
+    int total_pot;
     int bet;
     std::vector<std::shared_ptr<Player>> players;
 public:
-    Pot(int pot = 0, int bet = 0) : totalPot(pot), bet(bet) {}
+    Pot(int pot = 0) : total_pot(pot) {}
 
     void addPlayer(std::shared_ptr<Player>);
+    void addPlayers(const std::vector<std::shared_ptr<Player>> &);
+    void add(int bet);
+
+    int getPot();
+    std::vector<std::shared_ptr<Player>> getPlayers();
 };
 
 #endif

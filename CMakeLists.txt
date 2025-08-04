@@ -30,7 +30,7 @@ endif()
 
 
 
-add_executable(PokerStacker main.cpp mybot.cpp room.cpp player.cpp database.cpp common.cpp)
+add_executable(PokerStacker main.cpp mybot.cpp room.cpp player.cpp database.cpp common.cpp pot.cpp)
 
 find_package(PkgConfig REQUIRED)
 

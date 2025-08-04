@@ -26,8 +26,9 @@ class Room
     int sb{-1}, bb{-1};
     int cur_player{};
     int last{};
+    int cur_pot{};
     GameState state{GameState::PREFLOP};
-    std::vector<Pot> side_pots{};
+    std::vector<std::shared_ptr<Pot>> pots{};
 public:
     Room(std::shared_ptr<Player> owner = nullptr, 
          std::string _id = "",
@@ -40,6 +41,7 @@ public:
         } else {
             id = _id;
         }
+        pots.push_back(std::make_shared<Pot>());
     }
 
     std::string getId() const noexcept
@@ -76,11 +78,22 @@ public:
         current_bet = bet;
     }
 
+    void setStates(PlayerState state) {
+        for (auto player : order) {
+            player->setState(state);
+        }
+    }
     bool addPlayer(std::shared_ptr<Player> player);
 
     void removePlayer(std::shared_ptr<Player> player);
 
-    void nextPlayer();
+    int activePlayers();
+
+    int playingPlayers();
+
+    std::vector<std::shared_ptr<Player>> getActivePlayers();
+
+    bool nextPlayer();
 
     void updateLast();
 
@@ -94,7 +107,11 @@ public:
 
     void endRound();
 
-    void endGame(int winner = -1);
+    void endGame();
+
+    bool distributePot(const std::vector<int> &winners);
+
+    void results();
 
     void sendMessageToAll(const std::string &) const noexcept;
 
