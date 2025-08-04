@@ -29,7 +29,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 set(SOURCES
-    src/*.cpp)
+    src/common.cpp
+    src/database.cpp
+    src/main.cpp
+    src/mybot.cpp
+    src/player.cpp
+    src/pot.cpp
+    src/room.cpp
+    )
 
 add_executable(PokerStacker ${SOURCES})
 

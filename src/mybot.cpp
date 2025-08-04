@@ -159,7 +159,6 @@ void MyBot::handleGamble(Bot &bot, int64_t user_id)
             player->sendMessage("Вы не состоите ни в одной комнате!\nПрисоединиться /join\nСоздать /create");
             return;
         }
-        room->updatePlayers(db);
         room->startGame();
     } catch (NotEnough &) {
         player->sendMessage("К сожалению, Вы не можете играть в гордом одиночестве(.");

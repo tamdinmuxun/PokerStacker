@@ -1,6 +1,5 @@
 *.txt
 !CMakeLists.txt
-poker.cpp
 test.cpp
 test
 build
